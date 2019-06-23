@@ -41,14 +41,70 @@ server::server(int port)
 
 int server::handshake(SOCKET s)
 {
-	char c;
+	const char* pszVersion = "RFB 003.008\n";
+	char* pszBuffer = reinterpret_cast<char*>(malloc(sizeof(char) * 128));
+	if (pszBuffer == NULL)
+		throw "malloc() failed to allocated recv buffer in server::handshake()";
+
+	// version handshake
 	// state our protocol version
-	send(s, "RFB 003.008\n", strlen("RFB 003.008\n"), 0);
+	send(s, pszVersion, strlen(pszVersion), 0);
+
 	// client responds with its protocol version
-	while (recv(s, &c, 1, 0) != SOCKET_ERROR)
+	for (auto len = 0; len < strlen(pszVersion); )
 	{
-		std::cout << c;
+		auto read = recv(s, pszBuffer, strlen(pszVersion) - len, 0);
+		(read == SOCKET_ERROR) ? throw WSAGetLastError() : len += read;
 	}
+	if (strncmp(pszVersion, pszBuffer, strlen(pszVersion)) == 0)
+		std::cout << "Successfully negotiated version RFB Proto v3.8" << std::endl;
+	else
+		throw "Invalid protocol version requested";
+	
+	// next, security handshake
+	// first we state the number of security types we support and then send each security type.
+	auto security_type_c = (char)1;
+	send(s, &security_type_c, 1, 0);
+	auto security_type_vnc = (char)2;
+	send(s, &security_type_vnc, 1, 0);
+
+	// Client selects a type and returns it;
+	auto security_type_negotiated = (char)0;
+	recv(s, &security_type_negotiated, 1, 0);
+	
+	if (security_type_vnc == security_type_negotiated)
+	{
+		auto ok_response = reinterpret_cast<char*>(htonl(0));
+		send(s, ok_response, 4, 0);
+		std::cout << "Negotiated the VNC security type" << std::endl;
+	}
+	else
+	{
+		// TODO: send a reason string.
+		auto nok_response = reinterpret_cast<char*>(htonl(1));
+		send(s, nok_response, 4, 0);
+		throw "Failed to negotiate a valid security type";
+	}
+
+	// Security challenge - using a dummy value (all 0) for now.
+	auto chal = reinterpret_cast<char*>(calloc(1, 16));
+	if (chal != 0)
+		send(s, chal, 16, 0);
+	else
+		throw "calloc() failed to allocate buffer space";
+
+	char* pszCiphertext = reinterpret_cast<char*>( alloca(16) );
+	for (auto len = 0; len < 16; )
+	{
+		auto read = recv(s, pszCiphertext, 16 - len, 0);
+		(read == SOCKET_ERROR) ? throw WSAGetLastError() : len += read;
+	}
+	for (int i = 0; i < 16; i++)
+		std::cout << (int)pszCiphertext[i];
+
+	auto c = getchar();
+
+	free(pszBuffer);
 	return 0;
 }
 
