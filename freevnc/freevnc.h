@@ -4,7 +4,8 @@
 #include<atomic>
 
 #include<WinSock2.h>
-
+#include<bcrypt.h>
+#include<ntstatus.h>
 
 class __declspec(dllexport) vncscreen
 {

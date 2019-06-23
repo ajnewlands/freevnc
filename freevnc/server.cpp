@@ -99,9 +99,26 @@ int server::handshake(SOCKET s)
 		auto read = recv(s, pszCiphertext, 16 - len, 0);
 		(read == SOCKET_ERROR) ? throw WSAGetLastError() : len += read;
 	}
-	for (int i = 0; i < 16; i++)
-		std::cout << (int)pszCiphertext[i];
+	//for (int i = 0; i < 16; i++)
+	//	std::cout << (int)pszCiphertext[i];
 
+	// decrypt the password
+	BCRYPT_ALG_HANDLE hDES;
+	BCRYPT_KEY_HANDLE hKey;
+	// get the windows crypto provider
+	if (BCryptOpenAlgorithmProvider(&hDES, BCRYPT_DES_ALGORITHM, NULL, 0) != STATUS_SUCCESS)
+		throw "Failed to initialize the DES provider";
+	char Cleartext[16];
+	const char* pszPassword = "hello123";
+	std::cout << "Password will be " << pszPassword << std::endl;
+	ULONG OutputLength = 0;
+	auto r = BCryptDecrypt((BCRYPT_KEY_HANDLE)pszPassword, (PUCHAR)pszCiphertext, 16, NULL, NULL, 0, (PUCHAR)& Cleartext, 16, &OutputLength, 0);
+	if (r != STATUS_SUCCESS)
+		std::cout << "Decrypt failed " << std::hex << r << std::endl;
+	std::cout << Cleartext << std::endl;
+
+	if (memcmp(Cleartext, chal, 16) == 0)
+		std::cout << " By some miracle, authenticatino worked" << std::endl;
 	auto c = getchar();
 
 	free(pszBuffer);

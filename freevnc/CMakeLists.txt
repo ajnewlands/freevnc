@@ -8,6 +8,8 @@ add_library( freevnc SHARED freevnc.cpp vncscreen.cpp server.cpp freevnc.h)
 
 if(WIN32)
   target_link_libraries(freevnc wsock32 ws2_32)
+  target_link_libraries(freevnc bcrypt)
+
 endif()
 
 # make library headers available to other targets
