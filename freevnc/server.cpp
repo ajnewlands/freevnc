@@ -31,15 +31,15 @@ int server::server_init(const SOCKET& s)
 
 	pixel_fmt fmt;
 	fmt.bpp = 32;
-	fmt.depth = 24;
-	fmt.big_endian = 0;
-	fmt.true_color = 0;
-	fmt.blue_shift = 0;
+	fmt.depth = 32;
+	fmt.big_endian = 1;
+	fmt.true_color = 1;
+	fmt.blue_shift = 16;
 	fmt.red_shift = 0;
-	fmt.green_shift = 0;
-	fmt.red_max = htons(static_cast<short>(pow(2, 8)) - 1);
-	fmt.blue_max = htons(static_cast<short>(pow(2, 8)) - 1);
-	fmt.green_max = htons(static_cast<short>(pow(2, 8)) - 1);
+	fmt.green_shift = 8;
+	fmt.red_max = 0;
+	fmt.blue_max = 0;
+	fmt.green_max = 0;
 	send(s, reinterpret_cast<char*>(&fmt), 16, 0);
 
 	uint32_t namelen = htonl(3);
