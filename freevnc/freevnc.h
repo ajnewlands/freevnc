@@ -24,4 +24,6 @@ public:
 private:
 	~server();
 	int server::handshake(SOCKET);
+	void security_handshake(const SOCKET& s, char* pszBuffer);
+	int server_init(const SOCKET& s);
 };

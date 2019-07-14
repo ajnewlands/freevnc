@@ -5,6 +5,8 @@ cmake_minimum_required (VERSION 3.8)
 
 #build the underlying library
 add_library( freevnc SHARED freevnc.cpp vncscreen.cpp server.cpp freevnc.h)
+set_property(TARGET freevnc PROPERTY CXX_STANDARD 17)
+set_property(TARGET freevnc PROPERTY CXX_STANDARD_REQUIRED ON)
 
 if(WIN32)
   target_link_libraries(freevnc wsock32 ws2_32)
