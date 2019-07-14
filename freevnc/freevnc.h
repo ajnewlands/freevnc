@@ -26,4 +26,10 @@ private:
 	int server::handshake(SOCKET);
 	void security_handshake(const SOCKET& s, char* pszBuffer);
 	int server_init(const SOCKET& s);
+	void HandleSetPixelFormat(const SOCKET& s);
+	void HandleSetEncodings(const SOCKET& s);
+	void HandleFrameBufferUpdateRequest(const SOCKET& s);
+	void HandlePointerEvent(const SOCKET& s);
+	void HandleKeyEvent(const SOCKET& s);
+	void HandleClientCutEvent(const SOCKET& s);
 };

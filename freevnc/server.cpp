@@ -87,6 +87,87 @@ server::server(int port)
 	}
 }
 
+void server::HandleSetPixelFormat(const SOCKET& s)
+{
+	pixel_fmt fmt;
+	recv(s, reinterpret_cast<char*>( &fmt ), 3, MSG_WAITALL); // 3 bytes of padding
+	recv(s, reinterpret_cast<char*>( &fmt ), 16, MSG_WAITALL); // the actual message format object
+	printf("Desired format: BPP %d, DEPTH %d\n", fmt.bpp, fmt.depth);
+}
+
+void server::HandleSetEncodings(const SOCKET& s)
+{
+	char padding;
+	recv(s, &padding, 1, MSG_WAITALL); // padding
+
+	uint16_t number_of_encodings =0;
+	recv(s, reinterpret_cast<char*>(&number_of_encodings), 2, MSG_WAITALL);
+	number_of_encodings = htons(number_of_encodings);
+	printf("Number of encodings %hi\n", number_of_encodings);
+
+	int32_t encoding = 0;
+	for (auto i = 0; i < number_of_encodings; i++)
+	{
+		recv(s, reinterpret_cast<char*>(&encoding), 4, MSG_WAITALL);
+		printf("(%d) Encoding available: %d\n", i, ntohl(encoding));
+	}
+}
+
+void server::HandleFrameBufferUpdateRequest(const SOCKET& s)
+{
+	char incremental = 0;
+	uint16_t x = -1;
+	uint16_t y = -1;
+	uint16_t w = -1;
+	uint16_t h = -1;
+
+	recv(s, &incremental, 1, MSG_WAITALL);
+	recv(s, reinterpret_cast<char*>(&x), 2, MSG_WAITALL); x = htons(x);
+	recv(s, reinterpret_cast<char*>(&y), 2, MSG_WAITALL); y = htons(y);
+	recv(s, reinterpret_cast<char*>(&w), 2, MSG_WAITALL); w = htons(w);
+	recv(s, reinterpret_cast<char*>(&h), 2, MSG_WAITALL); h = htons(h);
+	printf("Frame buffer update: x: %hi y: %hi, w: %hi, h: %hi\n", x, y, w, h);
+}
+
+void server::HandleKeyEvent(const SOCKET& s)
+{
+	char down_flag;
+	uint16_t pad;
+	uint32_t keysym;
+
+	recv(s, &down_flag, 1, MSG_WAITALL);
+	recv(s, reinterpret_cast<char*>( &pad ), 2, MSG_WAITALL);
+	recv(s, reinterpret_cast<char*>(&keysym), 4, MSG_WAITALL);
+
+	printf("Key press event: keysym: %x, down flag: %hhi", keysym, down_flag);
+}
+
+void server::HandleClientCutEvent(const SOCKET& s)
+{
+	uint32_t pad;
+	uint32_t length;
+	recv(s, reinterpret_cast<char*>(&pad), 3, MSG_WAITALL);
+	recv(s, reinterpret_cast<char*>(&length), 4, MSG_WAITALL); length = ntohl(length);
+	printf("Client cut event, text length %d\n", length);
+
+	char* text = new char[length + 1L];
+	recv(s, text, length, MSG_WAITALL);
+	text[length] = '\0';
+	printf("Client cut text: %s", text);
+	delete[] text;
+}
+
+void server::HandlePointerEvent(const SOCKET& s)
+{
+	char mask;
+	uint16_t x = -1, y = -1;
+	recv(s, &mask, 1, MSG_WAITALL);
+	recv(s, reinterpret_cast<char*>(&x), 2, MSG_WAITALL); x = htons(x);
+	recv(s, reinterpret_cast<char*>(&y), 2, MSG_WAITALL); y = htons(y);
+
+	printf("Pointer event: x: %hi, y: %hi, mask: %hhi\n", x, y, mask);
+}
+
 int server::handshake(SOCKET s)
 {
 	const char* pszVersion = "RFB 003.008\n";
@@ -148,7 +229,22 @@ int server::handshake(SOCKET s)
 
 	char c;
 	while (recv(s, &c, 1, 0) > 0) // receive a stream of client messages.
+	{		
 		printf("%hhx ", c);
+		if (c == (char)0)
+			HandleSetPixelFormat(s);
+		else if (c == (char)2)
+			HandleSetEncodings(s);
+		else if (c == (char)3)
+			HandleFrameBufferUpdateRequest(s);
+		else if (c == (char)4)
+			HandleKeyEvent(s);
+		else if (c == (char)5)
+			HandlePointerEvent(s);
+		else if (c == (char)6)
+			HandleClientCutEvent(s);
+	}
+
 
 	return 0;
 }
